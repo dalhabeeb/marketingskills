@@ -141,6 +141,50 @@ app.delete('/api/cards/:id', (req, res) => {
   res.json(serializeState());
 });
 
+app.patch('/api/cards/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(id);
+  if (!card) return res.status(404).json({ error: 'not found' });
+
+  const title = req.body.title !== undefined ? String(req.body.title).trim() : card.title;
+  const deadline =
+    req.body.deadline !== undefined ? normalizeDeadline(req.body.deadline) : card.deadline;
+  if (!title) return res.status(400).json({ error: 'title cannot be empty' });
+
+  db.prepare('UPDATE cards SET title = ?, deadline = ? WHERE id = ?').run(title, deadline, id);
+  if (title !== card.title) {
+    db.prepare('INSERT INTO classifier_terms (domain_id, text) VALUES (?, ?)').run(
+      card.domain_id,
+      title
+    );
+  }
+  res.json(serializeState());
+});
+
+app.post('/api/cards/:id/subtasks', (req, res) => {
+  const cardId = Number(req.params.id);
+  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
+  if (!card) return res.status(404).json({ error: 'not found' });
+
+  const label = String(req.body.label || '').trim();
+  if (!label) return res.status(400).json({ error: 'label is required' });
+
+  const maxOrder =
+    db.prepare('SELECT COALESCE(MAX(sort_order), -1) m FROM subtasks WHERE card_id = ?').get(
+      cardId
+    ).m + 1;
+  db.prepare('INSERT INTO subtasks (card_id, label, done, sort_order) VALUES (?, ?, 0, ?)').run(
+    cardId,
+    label,
+    maxOrder
+  );
+  db.prepare('INSERT INTO classifier_terms (domain_id, text) VALUES (?, ?)').run(
+    card.domain_id,
+    label
+  );
+  res.status(201).json(serializeState());
+});
+
 app.patch('/api/cards/:id/toggle', (req, res) => {
   const id = Number(req.params.id);
   const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(id);
@@ -160,6 +204,22 @@ app.patch('/api/subtasks/:id/toggle', (req, res) => {
   const subtask = db.prepare('SELECT * FROM subtasks WHERE id = ?').get(id);
   if (!subtask) return res.status(404).json({ error: 'not found' });
   db.prepare('UPDATE subtasks SET done = ? WHERE id = ?').run(subtask.done ? 0 : 1, id);
+  res.json(serializeState());
+});
+
+app.patch('/api/subtasks/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const subtask = db.prepare('SELECT * FROM subtasks WHERE id = ?').get(id);
+  if (!subtask) return res.status(404).json({ error: 'not found' });
+  const label = req.body.label !== undefined ? String(req.body.label).trim() : subtask.label;
+  if (!label) return res.status(400).json({ error: 'label cannot be empty' });
+  db.prepare('UPDATE subtasks SET label = ? WHERE id = ?').run(label, id);
+  res.json(serializeState());
+});
+
+app.delete('/api/subtasks/:id', (req, res) => {
+  const id = Number(req.params.id);
+  db.prepare('DELETE FROM subtasks WHERE id = ?').run(id);
   res.json(serializeState());
 });
 

@@ -39,8 +39,12 @@ export default function App() {
 
   const addCard = withRefresh(api.addCard);
   const deleteCard = withRefresh(api.deleteCard);
+  const updateCard = withRefresh(api.updateCard);
   const toggleCard = withRefresh(api.toggleCard);
+  const addSubtask = withRefresh(api.addSubtask);
   const toggleSubtask = withRefresh(api.toggleSubtask);
+  const updateSubtask = withRefresh(api.updateSubtask);
+  const deleteSubtask = withRefresh(api.deleteSubtask);
   const bumpHabit = withRefresh(api.bumpHabit);
   const confirmQuickAdd = withRefresh(api.confirmQuickAdd);
   const closeWeek = withRefresh(api.closeWeek);
@@ -99,8 +103,12 @@ export default function App() {
         domains={state.domains}
         onAddCard={addCard}
         onDeleteCard={deleteCard}
+        onUpdateCard={updateCard}
         onToggleCard={toggleCard}
+        onAddSubtask={addSubtask}
         onToggleSubtask={toggleSubtask}
+        onUpdateSubtask={updateSubtask}
+        onDeleteSubtask={deleteSubtask}
       />
 
       {previewItems && (

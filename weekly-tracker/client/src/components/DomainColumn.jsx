@@ -3,7 +3,17 @@ import Card from './Card.jsx';
 
 const DEADLINES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export default function DomainColumn({ domain, onAddCard, onDeleteCard, onToggleCard, onToggleSubtask }) {
+export default function DomainColumn({
+  domain,
+  onAddCard,
+  onDeleteCard,
+  onUpdateCard,
+  onToggleCard,
+  onAddSubtask,
+  onToggleSubtask,
+  onUpdateSubtask,
+  onDeleteSubtask,
+}) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [subtasksText, setSubtasksText] = useState('');
@@ -51,8 +61,12 @@ export default function DomainColumn({ domain, onAddCard, onDeleteCard, onToggle
             key={card.id}
             card={card}
             onDelete={() => onDeleteCard(card.id)}
+            onUpdate={(patch) => onUpdateCard(card.id, patch)}
             onToggle={() => onToggleCard(card.id)}
+            onAddSubtask={(label) => onAddSubtask(card.id, label)}
             onToggleSubtask={onToggleSubtask}
+            onUpdateSubtask={onUpdateSubtask}
+            onDeleteSubtask={onDeleteSubtask}
           />
         ))}
         {domain.cards.length === 0 && !adding && (
