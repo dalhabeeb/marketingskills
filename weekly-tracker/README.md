@@ -39,6 +39,57 @@ one process/port is needed to deploy (e.g. on a small VPS or a container
 platform). Point `DB_PATH` at a persistent volume if your host's filesystem
 isn't durable across deploys.
 
+## Deploy to Railway
+
+**Railway's container filesystem is ephemeral — it is rebuilt from scratch on
+every redeploy.** A SQLite file written to a normal path in the app directory
+(the default, `server/data/tracker.db`) will be silently wiped the next time
+you deploy. To persist data, attach a Railway **Volume** and point `DB_PATH`
+at a path inside it. The app already reads `DB_PATH` from the environment
+(`server/src/db.js`), so no code changes are needed — this is purely a Railway
+project-configuration step.
+
+A `Dockerfile` at the repo root (this directory) is included so Railway
+builds this exact image rather than guessing via Nixpacks.
+
+```bash
+npm install -g @railway/cli
+railway login                 # opens a browser to authenticate
+
+cd weekly-tracker              # repo root for this app
+railway init                   # create a new Railway project (or `railway link` to an existing one)
+railway up                     # builds the Dockerfile and deploys
+
+railway volume add -m /data    # create a volume, mounted at /data in the container
+railway variables --set "DB_PATH=/data/tracker.db"
+
+railway up                     # redeploy so the new variable takes effect
+railway domain                 # generate a public *.up.railway.app URL
+```
+
+**Verify persistence yourself** (this is the part that actually matters —
+don't skip it):
+
+```bash
+URL=https://<your-app>.up.railway.app
+
+# 1. Write something identifiable
+curl -s -X PATCH "$URL/api/habits/quran" -H "Content-Type: application/json" -d '{"delta":0.5}'
+
+# 2. Confirm it's there
+curl -s "$URL/api/state" | grep -o '"quran".\{0,40\}'
+
+# 3. Force a redeploy (the exact scenario that wipes an unmounted filesystem)
+railway up
+
+# 4. Re-check — the value from step 1 must still be there
+curl -s "$URL/api/state" | grep -o '"quran".\{0,40\}'
+```
+
+If step 4 doesn't match step 2, the volume isn't actually mounted at the path
+`DB_PATH` points to — check `railway volume list` and the service's mount
+path in the Railway dashboard.
+
 ## Data model
 
 - **Domains** (fixed): TEDx, Study, Research, Creative — each holds a list
